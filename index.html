@@ -1,0 +1,1316 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>晶体晶胞堆积模拟</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            color: #fff;
+            overflow: hidden;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+
+        .sidebar {
+            width: 340px;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            overflow-y: auto;
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        h1 {
+            font-size: 20px;
+            text-align: center;
+            background: linear-gradient(45deg, #00d4ff, #7b2cbf);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .section {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .section h2 {
+            font-size: 14px;
+            margin-bottom: 10px;
+            color: #00d4ff;
+        }
+
+        .btn-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .btn-row {
+            display: flex;
+            gap: 6px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 8px 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            background: linear-gradient(45deg, #7b2cbf, #9d4edd);
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(123, 44, 191, 0.4);
+        }
+
+        .btn.active {
+            background: linear-gradient(45deg, #00d4ff, #0099cc);
+            box-shadow: 0 5px 15px rgba(0, 212, 255, 0.4);
+        }
+
+        .info-box {
+            font-size: 12px;
+            line-height: 1.6;
+        }
+
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .info-item:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            color: #aaa;
+        }
+
+        .info-value {
+            color: #00d4ff;
+            font-weight: bold;
+        }
+
+        #canvas-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        canvas {
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        .controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 15px;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 12px 20px;
+            border-radius: 50px;
+            backdrop-filter: blur(10px);
+        }
+
+        .control-btn {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            cursor: pointer;
+            font-size: 18px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .control-btn:hover {
+            background: rgba(0, 212, 255, 0.3);
+            border-color: #00d4ff;
+            transform: scale(1.1);
+        }
+
+        .control-btn.active {
+            background: rgba(255, 100, 100, 0.5);
+            border-color: #ff6464;
+        }
+
+        .hint {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.6);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            color: #ccc;
+        }
+
+        .animation-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .slider-container {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .slider-container label {
+            font-size: 11px;
+            color: #aaa;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 5px;
+            border-radius: 3px;
+            background: rgba(255, 255, 255, 0.2);
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #00d4ff;
+            cursor: pointer;
+        }
+
+        .records-section {
+            max-height: 120px;
+            overflow-y: auto;
+        }
+
+        .record-item {
+            padding: 6px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+            margin-bottom: 5px;
+            font-size: 11px;
+        }
+
+        .record-type {
+            color: #00d4ff;
+            font-weight: bold;
+        }
+
+        .record-time {
+            color: #888;
+            font-size: 9px;
+        }
+
+        .measurement-panel {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 8px;
+        }
+
+        .measurement-result {
+            font-size: 13px;
+            color: #ffd700;
+            margin-top: 5px;
+        }
+
+        .challenge-panel {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 8px;
+        }
+
+        .challenge-question {
+            font-size: 12px;
+            color: #fff;
+            margin-bottom: 10px;
+            line-height: 1.5;
+        }
+
+        .challenge-input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 13px;
+            margin-bottom: 8px;
+        }
+
+        .challenge-input::placeholder {
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        .challenge-result {
+            font-size: 12px;
+            padding: 8px;
+            border-radius: 6px;
+            margin-top: 8px;
+            text-align: center;
+        }
+
+        .challenge-result.correct {
+            background: rgba(0, 200, 100, 0.3);
+            color: #00ff88;
+        }
+
+        .challenge-result.wrong {
+            background: rgba(200, 50, 50, 0.3);
+            color: #ff6666;
+        }
+
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 11px;
+        }
+
+        .legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .tab-buttons {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 10px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 6px 10px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            background: transparent;
+            color: #aaa;
+            cursor: pointer;
+            font-size: 11px;
+            transition: all 0.3s;
+        }
+
+        .tab-btn.active {
+            background: rgba(0, 212, 255, 0.3);
+            color: #00d4ff;
+            border-color: #00d4ff;
+        }
+
+        .crystal-category {
+            font-size: 11px;
+            color: #888;
+            margin: 8px 0 4px;
+            padding-left: 5px;
+            border-left: 3px solid #00d4ff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <h1>晶体晶胞堆积模拟</h1>
+            
+            <div class="section">
+                <h2>选择晶胞类型</h2>
+                <div class="crystal-category">金属晶体</div>
+                <div class="btn-row">
+                    <button class="btn active" data-type="sc">简单立方</button>
+                    <button class="btn" data-type="bcc">体心立方</button>
+                    <button class="btn" data-type="fcc">面心立方</button>
+                </div>
+                <div class="crystal-category">离子晶体</div>
+                <div class="btn-row">
+                    <button class="btn" data-type="nacl">NaCl型</button>
+                    <button class="btn" data-type="cscl">CsCl型</button>
+                </div>
+                <div class="crystal-category">原子晶体</div>
+                <div class="btn-row">
+                    <button class="btn" data-type="diamond">金刚石</button>
+                    <button class="btn" data-type="graphite">石墨</button>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>晶胞参数</h2>
+                <div class="info-box">
+                    <div class="info-item">
+                        <span class="info-label">晶胞类型</span>
+                        <span class="info-value" id="cell-type">简单立方</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">原子/离子数</span>
+                        <span class="info-value" id="atom-count">1</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">配位数</span>
+                        <span class="info-value" id="coordination-number">6</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">空间利用率</span>
+                        <span class="info-value" id="packing-efficiency">52.36%</span>
+                    </div>
+                </div>
+                <div class="legend" id="legend"></div>
+            </div>
+
+            <div class="section">
+                <div class="tab-buttons">
+                    <button class="tab-btn active" data-tab="display">显示控制</button>
+                    <button class="tab-btn" data-tab="measure">测量工具</button>
+                    <button class="tab-btn" data-tab="challenge">密度计算</button>
+                </div>
+
+                <div id="tab-display" class="tab-content">
+                    <div class="animation-controls">
+                        <div class="slider-container">
+                            <label>原子大小</label>
+                            <input type="range" id="atom-size" min="0.5" max="1.5" step="0.1" value="1">
+                        </div>
+                        <div class="slider-container">
+                            <label>旋转速度</label>
+                            <input type="range" id="rotation-speed" min="0" max="2" step="0.1" value="0.5">
+                        </div>
+                        <div class="btn-row">
+                            <button class="btn" id="toggle-animation">暂停动画</button>
+                            <button class="btn" id="reset-view">重置视角</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="tab-measure" class="tab-content" style="display:none">
+                    <div class="measurement-panel">
+                        <p style="font-size:12px;color:#aaa;margin-bottom:8px">在画布上点击两个点测量距离</p>
+                        <button class="btn" id="start-measure" style="width:100%">开始测量</button>
+                        <div class="measurement-result" id="measure-result">点击画布选择测量点</div>
+                    </div>
+                </div>
+
+                <div id="tab-challenge" class="tab-content" style="display:none">
+                    <div class="challenge-panel">
+                        <div class="challenge-question" id="challenge-question">
+                            点击"新题目"开始挑战！
+                        </div>
+                        <input type="number" class="challenge-input" id="challenge-answer" placeholder="输入密度值 (g/cm³)" step="0.01">
+                        <div class="btn-row">
+                            <button class="btn" id="new-challenge">新题目</button>
+                            <button class="btn" id="submit-answer">提交答案</button>
+                        </div>
+                        <div class="challenge-result" id="challenge-result"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section records-section">
+                <h2>学习记录</h2>
+                <div id="records-container"></div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="hint" id="hint">拖拽鼠标旋转视角 | 滚轮缩放</div>
+            <div id="canvas-container">
+                <canvas id="crystalCanvas"></canvas>
+            </div>
+            <div class="controls">
+                <button class="control-btn" id="prev-cell" title="上一个晶胞">◀</button>
+                <button class="control-btn" id="play-packing" title="播放堆积动画">▶</button>
+                <button class="control-btn" id="next-cell" title="下一个晶胞">▶</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class CrystalSimulator {
+            constructor() {
+                this.canvas = document.getElementById('crystalCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.width = 900;
+                this.height = 700;
+                this.canvas.width = this.width;
+                this.canvas.height = this.height;
+
+                this.currentType = 'sc';
+                this.rotationX = 0.5;
+                this.rotationY = 0.5;
+                this.zoom = 180;
+                this.atomSize = 1;
+                this.rotationSpeed = 0.5;
+                this.isAnimating = true;
+                this.isDragging = false;
+                this.lastMouseX = 0;
+                this.lastMouseY = 0;
+                this.packingAnimation = 0;
+                this.isPlayingPacking = false;
+                
+                this.isPinching = false;
+                this.lastTouchDistance = 0;
+                this.lastTouchX = 0;
+                this.lastTouchY = 0;
+
+                this.isMeasuring = false;
+                this.measurePoints = [];
+
+                this.currentChallenge = null;
+
+                this.cellTypes = {
+                    sc: {
+                        name: '简单立方',
+                        category: '金属晶体',
+                        atoms: 1,
+                        coordination: 6,
+                        efficiency: 52.36,
+                        a: 0.400,
+                        molarMass: 55.85,
+                        colors: ['#ff6b6b'],
+                        description: 'Po等少数金属'
+                    },
+                    bcc: {
+                        name: '体心立方',
+                        category: '金属晶体',
+                        atoms: 2,
+                        coordination: 8,
+                        efficiency: 68.02,
+                        a: 0.287,
+                        molarMass: 55.85,
+                        colors: ['#4ecdc4'],
+                        description: 'Na、K、Fe等'
+                    },
+                    fcc: {
+                        name: '面心立方',
+                        category: '金属晶体',
+                        atoms: 4,
+                        coordination: 12,
+                        efficiency: 74.05,
+                        a: 0.362,
+                        molarMass: 63.55,
+                        colors: ['#ffe66d'],
+                        description: 'Cu、Ag、Au等'
+                    },
+                    nacl: {
+                        name: 'NaCl型',
+                        category: '离子晶体',
+                        atoms: '4Na⁺+4Cl⁻',
+                        coordination: '6:6',
+                        efficiency: null,
+                        a: 0.564,
+                        molarMass: 58.44,
+                        colors: ['#4ecdc4', '#ff6b6b'],
+                        labels: ['Cl⁻', 'Na⁺'],
+                        description: 'NaCl、MgO等'
+                    },
+                    cscl: {
+                        name: 'CsCl型',
+                        category: '离子晶体',
+                        atoms: '1Cs⁺+1Cl⁻',
+                        coordination: '8:8',
+                        efficiency: null,
+                        a: 0.412,
+                        molarMass: 168.36,
+                        colors: ['#9b59b6', '#ff6b6b'],
+                        labels: ['Cs⁺', 'Cl⁻'],
+                        description: 'CsCl、CsBr等'
+                    },
+                    diamond: {
+                        name: '金刚石',
+                        category: '原子晶体',
+                        atoms: 8,
+                        coordination: 4,
+                        efficiency: 34.01,
+                        a: 0.357,
+                        molarMass: 12.01,
+                        colors: ['#f39c12'],
+                        description: '金刚石、Si、Ge等'
+                    },
+                    graphite: {
+                        name: '石墨',
+                        category: '原子晶体',
+                        atoms: 4,
+                        coordination: 3,
+                        efficiency: null,
+                        a: 0.246,
+                        c: 0.670,
+                        molarMass: 12.01,
+                        colors: ['#34495e'],
+                        description: '层状结构，sp²杂化'
+                    }
+                };
+
+                this.challenges = [
+                    { type: 'sc', question: '已知Po为简单立方结构，晶胞参数a = 0.336 nm，Po的摩尔质量为209 g/mol，计算Po的密度。', answer: 9.15, a: 0.336, molarMass: 209, Z: 1 },
+                    { type: 'bcc', question: 'Fe为体心立方结构，晶胞参数a = 0.287 nm，Fe的摩尔质量为55.85 g/mol，计算Fe的密度。', answer: 7.86, a: 0.287, molarMass: 55.85, Z: 2 },
+                    { type: 'fcc', question: 'Cu为面心立方结构，晶胞参数a = 0.362 nm，Cu的摩尔质量为63.55 g/mol，计算Cu的密度。', answer: 8.92, a: 0.362, molarMass: 63.55, Z: 4 },
+                    { type: 'nacl', question: 'NaCl的晶胞参数a = 0.564 nm，NaCl的摩尔质量为58.44 g/mol，计算NaCl的密度。(Z=4)', answer: 2.16, a: 0.564, molarMass: 58.44, Z: 4 },
+                    { type: 'diamond', question: '金刚石的晶胞参数a = 0.357 nm，C的摩尔质量为12.01 g/mol，计算金刚石的密度。(Z=8)', answer: 3.51, a: 0.357, molarMass: 12.01, Z: 8 },
+                    { type: 'cscl', question: 'CsCl的晶胞参数a = 0.412 nm，CsCl的摩尔质量为168.36 g/mol，计算CsCl的密度。(Z=1)', answer: 3.99, a: 0.412, molarMass: 168.36, Z: 1 }
+                ];
+
+                this.records = [];
+                this.init();
+            }
+
+            init() {
+                this.setupEventListeners();
+                this.loadRecords();
+                this.animate();
+                this.addRecord('页面加载，开始学习');
+                this.updateLegend();
+            }
+
+            setupEventListeners() {
+                document.querySelectorAll('[data-type]').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        document.querySelectorAll('[data-type]').forEach(b => b.classList.remove('active'));
+                        e.target.classList.add('active');
+                        this.setCellType(e.target.dataset.type);
+                    });
+                });
+
+                document.querySelectorAll('.tab-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                        e.target.classList.add('active');
+                        document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+                        document.getElementById('tab-' + e.target.dataset.tab).style.display = 'block';
+                    });
+                });
+
+                this.canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
+                this.canvas.addEventListener('mousemove', (e) => this.drag(e));
+                this.canvas.addEventListener('mouseup', () => this.endDrag());
+                this.canvas.addEventListener('mouseleave', () => this.endDrag());
+                this.canvas.addEventListener('wheel', (e) => this.zoomCanvas(e));
+                this.canvas.addEventListener('click', (e) => this.handleClick(e));
+
+                this.canvas.addEventListener('touchstart', (e) => this.handleTouchStart(e), { passive: false });
+                this.canvas.addEventListener('touchmove', (e) => this.handleTouchMove(e), { passive: false });
+                this.canvas.addEventListener('touchend', () => this.handleTouchEnd());
+
+                document.getElementById('atom-size').addEventListener('input', (e) => {
+                    this.atomSize = parseFloat(e.target.value);
+                });
+
+                document.getElementById('rotation-speed').addEventListener('input', (e) => {
+                    this.rotationSpeed = parseFloat(e.target.value);
+                });
+
+                document.getElementById('toggle-animation').addEventListener('click', (e) => {
+                    this.isAnimating = !this.isAnimating;
+                    e.target.textContent = this.isAnimating ? '暂停动画' : '继续动画';
+                });
+
+                document.getElementById('reset-view').addEventListener('click', () => {
+                    this.rotationX = 0.5;
+                    this.rotationY = 0.5;
+                    this.zoom = 180;
+                });
+
+                document.getElementById('prev-cell').addEventListener('click', () => this.changeCell(-1));
+                document.getElementById('next-cell').addEventListener('click', () => this.changeCell(1));
+                document.getElementById('play-packing').addEventListener('click', () => this.playPackingAnimation());
+
+                document.getElementById('start-measure').addEventListener('click', () => {
+                    this.isMeasuring = !this.isMeasuring;
+                    this.measurePoints = [];
+                    const btn = document.getElementById('start-measure');
+                    btn.textContent = this.isMeasuring ? '取消测量' : '开始测量';
+                    btn.classList.toggle('active', this.isMeasuring);
+                    document.getElementById('hint').textContent = this.isMeasuring ? '测量模式：点击两个原子测量距离' : '拖拽鼠标旋转视角 | 滚轮缩放';
+                    document.getElementById('measure-result').textContent = '点击画布选择测量点';
+                });
+
+                document.getElementById('new-challenge').addEventListener('click', () => this.newChallenge());
+                document.getElementById('submit-answer').addEventListener('click', () => this.submitAnswer());
+            }
+
+            setCellType(type) {
+                this.currentType = type;
+                this.updateInfo();
+                this.updateLegend();
+                this.addRecord(`切换到 ${this.cellTypes[type].name}`);
+            }
+
+            changeCell(direction) {
+                const types = ['sc', 'bcc', 'fcc', 'nacl', 'cscl', 'diamond', 'graphite'];
+                const currentIndex = types.indexOf(this.currentType);
+                const newIndex = (currentIndex + direction + types.length) % types.length;
+                const newType = types[newIndex];
+                
+                document.querySelectorAll('[data-type]').forEach(b => b.classList.remove('active'));
+                document.querySelector(`[data-type="${newType}"]`).classList.add('active');
+                this.setCellType(newType);
+            }
+
+            updateInfo() {
+                const cell = this.cellTypes[this.currentType];
+                document.getElementById('cell-type').textContent = cell.name;
+                document.getElementById('atom-count').textContent = cell.atoms;
+                document.getElementById('coordination-number').textContent = cell.coordination;
+                document.getElementById('packing-efficiency').textContent = cell.efficiency ? cell.efficiency + '%' : '-';
+            }
+
+            updateLegend() {
+                const cell = this.cellTypes[this.currentType];
+                const legend = document.getElementById('legend');
+                if (cell.labels) {
+                    legend.innerHTML = cell.colors.map((color, i) => `
+                        <div class="legend-item">
+                            <div class="legend-dot" style="background:${color}"></div>
+                            <span>${cell.labels[i]}</span>
+                        </div>
+                    `).join('');
+                } else {
+                    legend.innerHTML = '';
+                }
+            }
+
+            getAtoms() {
+                const a = 1.5;
+                const half = a / 2;
+                const quarter = a / 4;
+                let atoms = [];
+                const cell = this.cellTypes[this.currentType];
+
+                for (let x = -1; x <= 1; x++) {
+                    for (let y = -1; y <= 1; y++) {
+                        for (let z = -1; z <= 1; z++) {
+                            const colorIdx = this.currentType === 'cscl' ? 1 : (this.currentType === 'nacl' ? 0 : 0);
+                            const size = this.currentType === 'cscl' ? 0.8 : (this.currentType === 'nacl' ? 1.0 : 1.0);
+                            atoms.push({ x: x * a, y: y * a, z: z * a, type: 'corner', colorIndex: colorIdx, size: size });
+                        }
+                    }
+                }
+
+                if (this.currentType === 'bcc') {
+                    for (let x = -1; x <= 0; x++) {
+                        for (let y = -1; y <= 0; y++) {
+                            for (let z = -1; z <= 0; z++) {
+                                atoms.push({ x: x * a + half, y: y * a + half, z: z * a + half, type: 'center', colorIndex: 0 });
+                            }
+                        }
+                    }
+                } else if (this.currentType === 'fcc') {
+                    for (let x = -1; x <= 0; x++) {
+                        for (let y = -1; y <= 0; y++) {
+                            for (let z = -1; z <= 0; z++) {
+                                atoms.push({ x: x * a + half, y: y * a + half, z: z * a, type: 'face', colorIndex: 0 });
+                                atoms.push({ x: x * a + half, y: y * a, z: z * a + half, type: 'face', colorIndex: 0 });
+                                atoms.push({ x: x * a, y: y * a + half, z: z * a + half, type: 'face', colorIndex: 0 });
+                            }
+                        }
+                    }
+                } else if (this.currentType === 'nacl') {
+                    for (let x = -1; x <= 0; x++) {
+                        for (let y = -1; y <= 0; y++) {
+                            for (let z = -1; z <= 0; z++) {
+                                atoms.push({ x: x * a + half, y: y * a + half, z: z * a, type: 'face-na', colorIndex: 1, size: 0.6 });
+                                atoms.push({ x: x * a + half, y: y * a, z: z * a + half, type: 'face-na', colorIndex: 1, size: 0.6 });
+                                atoms.push({ x: x * a, y: y * a + half, z: z * a + half, type: 'face-na', colorIndex: 1, size: 0.6 });
+                            }
+                        }
+                    }
+                    for (let x = -1; x <= 0; x++) {
+                        for (let y = -1; y <= 0; y++) {
+                            for (let z = -1; z <= 0; z++) {
+                                atoms.push({ x: x * a + half, y: y * a + half, z: z * a + half, type: 'center-na', colorIndex: 1, size: 0.6 });
+                            }
+                        }
+                    }
+                } else if (this.currentType === 'cscl') {
+                    for (let x = -1; x <= 0; x++) {
+                        for (let y = -1; y <= 0; y++) {
+                            for (let z = -1; z <= 0; z++) {
+                                atoms.push({ x: x * a + half, y: y * a + half, z: z * a + half, type: 'center-cs', colorIndex: 0, size: 1.1 });
+                            }
+                        }
+                    }
+                } else if (this.currentType === 'diamond') {
+                    for (let x = -1; x <= 0; x++) {
+                        for (let y = -1; y <= 0; y++) {
+                            for (let z = -1; z <= 0; z++) {
+                                atoms.push({ x: x * a + half, y: y * a + half, z: z * a, type: 'face', colorIndex: 0 });
+                                atoms.push({ x: x * a + half, y: y * a, z: z * a + half, type: 'face', colorIndex: 0 });
+                                atoms.push({ x: x * a, y: y * a + half, z: z * a + half, type: 'face', colorIndex: 0 });
+                            }
+                        }
+                    }
+                    for (let dx = 0; dx <= 1; dx++) {
+                        for (let dy = 0; dy <= 1; dy++) {
+                            for (let dz = 0; dz <= 1; dz++) {
+                                if ((dx + dy + dz) % 2 === 0) {
+                                    atoms.push({ 
+                                        x: -a + dx * half + quarter, 
+                                        y: -a + dy * half + quarter, 
+                                        z: -a + dz * half + quarter, 
+                                        type: 'tetra', 
+                                        colorIndex: 0 
+                                    });
+                                }
+                            }
+                        }
+                    }
+                } else if (this.currentType === 'graphite') {
+                    const layerDistance = a * 0.8;
+                    for (let layer = -1; layer <= 1; layer++) {
+                        const z = layer * layerDistance;
+                        for (let x = -1; x <= 1; x++) {
+                            for (let y = -1; y <= 1; y++) {
+                                if ((x + y) % 2 === 0) {
+                                    atoms.push({ x: x * a * 0.8, y: y * a * 0.8, z: z, type: 'layer', colorIndex: 0 });
+                                }
+                                if ((x + y) % 2 !== 0) {
+                                    atoms.push({ x: x * a * 0.8 + a * 0.4, y: y * a * 0.8 + a * 0.4, z: z, type: 'layer', colorIndex: 0 });
+                                }
+                            }
+                        }
+                    }
+                }
+
+                return atoms;
+            }
+
+            getIonCharge(x, y, z, a) {
+                if (this.currentType === 'nacl') {
+                    const sum = Math.round(x/a) + Math.round(y/a) + Math.round(z/a);
+                    return sum % 2 === 0 ? 1 : -1;
+                } else if (this.currentType === 'cscl') {
+                    const dist = Math.sqrt(x*x + y*y + z*z);
+                    return dist < 0.1 * a ? 1 : -1;
+                }
+                return 0;
+            }
+
+            getBonds() {
+                const a = 1.5;
+                const half = a / 2;
+                const bonds = [];
+                const directions = [
+                    [1, 0, 0], [-1, 0, 0],
+                    [0, 1, 0], [0, -1, 0],
+                    [0, 0, 1], [0, 0, -1]
+                ];
+
+                if (this.currentType === 'nacl') {
+                    for (let x = -1; x <= 1; x++) {
+                        for (let y = -1; y <= 1; y++) {
+                            for (let z = -1; z <= 1; z++) {
+                                const start = { x: x * a, y: y * a, z: z * a };
+                                directions.forEach(([dx, dy, dz]) => {
+                                    const end = {
+                                        x: (x + dx) * a,
+                                        y: (y + dy) * a,
+                                        z: (z + dz) * a
+                                    };
+                                    if (Math.abs(end.x) <= a && Math.abs(end.y) <= a && Math.abs(end.z) <= a) {
+                                        bonds.push({ start, end });
+                                    }
+                                });
+                            }
+                        }
+                    }
+                    
+                    for (let x = -1; x <= 0; x++) {
+                        for (let y = -1; y <= 0; y++) {
+                            for (let z = -1; z <= 0; z++) {
+                                const faceCenters = [
+                                    { x: x * a + half, y: y * a + half, z: z * a },
+                                    { x: x * a + half, y: y * a, z: z * a + half },
+                                    { x: x * a, y: y * a + half, z: z * a + half }
+                                ];
+                                faceCenters.forEach(center => {
+                                    directions.forEach(([dx, dy, dz]) => {
+                                        const end = {
+                                            x: center.x + dx * half,
+                                            y: center.y + dy * half,
+                                            z: center.z + dz * half
+                                        };
+                                        if (Math.abs(end.x) <= a && Math.abs(end.y) <= a && Math.abs(end.z) <= a) {
+                                            bonds.push({ start: center, end });
+                                        }
+                                    });
+                                });
+                            }
+                        }
+                    }
+                } else if (this.currentType === 'cscl') {
+                    for (let x = -1; x <= 0; x++) {
+                        for (let y = -1; y <= 0; y++) {
+                            for (let z = -1; z <= 0; z++) {
+                                const cx = x * a + half;
+                                const cy = y * a + half;
+                                const cz = z * a + half;
+                                [[1,1,1],[-1,1,1],[1,-1,1],[1,1,-1],[-1,-1,1],[-1,1,-1],[1,-1,-1],[-1,-1,-1]].forEach(([dx, dy, dz]) => {
+                                    bonds.push({
+                                        start: { x: cx, y: cy, z: cz },
+                                        end: { x: cx + dx * half, y: cy + dy * half, z: cz + dz * half }
+                                    });
+                                });
+                            }
+                        }
+                    }
+                } else {
+                    for (let x = -1; x <= 1; x++) {
+                        for (let y = -1; y <= 1; y++) {
+                            for (let z = -1; z <= 1; z++) {
+                                const start = { x: x * a, y: y * a, z: z * a };
+                                directions.forEach(([dx, dy, dz]) => {
+                                    const end = {
+                                        x: (x + dx) * a,
+                                        y: (y + dy) * a,
+                                        z: (z + dz) * a
+                                    };
+                                    if (Math.abs(end.x) <= a && Math.abs(end.y) <= a && Math.abs(end.z) <= a) {
+                                        bonds.push({ start, end });
+                                    }
+                                });
+                            }
+                        }
+                    }
+
+                    if (this.currentType === 'diamond') {
+                        const quarter = a / 4;
+                        for (let dx = 0; dx <= 1; dx++) {
+                            for (let dy = 0; dy <= 1; dy++) {
+                                for (let dz = 0; dz <= 1; dz++) {
+                                    if ((dx + dy + dz) % 2 === 0) {
+                                        const cx = -a + dx * half + quarter;
+                                        const cy = -a + dy * half + quarter;
+                                        const cz = -a + dz * half + quarter;
+                                        [[1, 1, 1], [-1, -1, 1], [-1, 1, -1], [1, -1, -1]].forEach(([bx, by, bz]) => {
+                                            bonds.push({
+                                                start: { x: cx, y: cy, z: cz },
+                                                end: { x: cx + bx * quarter, y: cy + by * quarter, z: cz + bz * quarter }
+                                            });
+                                        });
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                return bonds;
+            }
+
+            project(x, y, z) {
+                let x1 = x * Math.cos(this.rotationY) - z * Math.sin(this.rotationY);
+                let z1 = x * Math.sin(this.rotationY) + z * Math.cos(this.rotationY);
+                
+                let y1 = y * Math.cos(this.rotationX) - z1 * Math.sin(this.rotationX);
+                let z2 = y * Math.sin(this.rotationX) + z1 * Math.cos(this.rotationX);
+
+                const scale = this.zoom / (z2 + 5);
+                return {
+                    x: this.width / 2 + x1 * scale,
+                    y: this.height / 2 + y1 * scale,
+                    z: z2,
+                    scale: scale
+                };
+            }
+
+            drawSphere(x, y, radius, color, scale) {
+                const gradient = this.ctx.createRadialGradient(
+                    x - radius * 0.3, y - radius * 0.3, 0,
+                    x, y, radius
+                );
+                gradient.addColorStop(0, '#ffffff');
+                gradient.addColorStop(0.3, color);
+                gradient.addColorStop(1, this.darkenColor(color, 0.5));
+                
+                this.ctx.beginPath();
+                this.ctx.arc(x, y, radius, 0, Math.PI * 2);
+                this.ctx.fillStyle = gradient;
+                this.ctx.fill();
+            }
+
+            darkenColor(color, factor) {
+                const hex = color.replace('#', '');
+                const r = Math.floor(parseInt(hex.substr(0, 2), 16) * factor);
+                const g = Math.floor(parseInt(hex.substr(2, 2), 16) * factor);
+                const b = Math.floor(parseInt(hex.substr(4, 2), 16) * factor);
+                return `rgb(${r},${g},${b})`;
+            }
+
+            draw() {
+                this.ctx.fillStyle = '#0a0a1a';
+                this.ctx.fillRect(0, 0, this.width, this.height);
+
+                const cell = this.cellTypes[this.currentType];
+                const atoms = this.getAtoms();
+                const bonds = this.getBonds();
+
+                const projectedAtoms = atoms.map(atom => ({
+                    ...atom,
+                    projected: this.project(atom.x, atom.y, atom.z)
+                }));
+
+                const projectedBonds = bonds.map(bond => ({
+                    start: this.project(bond.start.x, bond.start.y, bond.start.z),
+                    end: this.project(bond.end.x, bond.end.y, bond.end.z)
+                }));
+
+                projectedBonds.forEach(bond => {
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(bond.start.x, bond.start.y);
+                    this.ctx.lineTo(bond.end.x, bond.end.y);
+                    this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+                    this.ctx.lineWidth = 1;
+                    this.ctx.stroke();
+                });
+
+                projectedAtoms.sort((a, b) => b.projected.z - a.projected.z);
+
+                const packingScale = this.isPlayingPacking ? Math.min(this.packingAnimation, 1) : 1;
+
+                projectedAtoms.forEach(atom => {
+                    const p = atom.projected;
+                    const sizeFactor = atom.size || 1;
+                    const baseRadius = 18 * this.atomSize * packingScale * sizeFactor;
+                    const radius = baseRadius * (p.scale / 40);
+                    const color = cell.colors[atom.colorIndex] || cell.colors[0];
+                    this.drawSphere(p.x, p.y, radius, color, p.scale);
+                });
+
+                if (this.isMeasuring) {
+                    this.measurePoints.forEach((point, index) => {
+                        this.ctx.beginPath();
+                        this.ctx.arc(point.x, point.y, 8, 0, Math.PI * 2);
+                        this.ctx.strokeStyle = '#ffd700';
+                        this.ctx.lineWidth = 3;
+                        this.ctx.stroke();
+                        this.ctx.fillStyle = '#ffd700';
+                        this.ctx.font = 'bold 14px Arial';
+                        this.ctx.fillText(index + 1, point.x - 4, point.y + 5);
+                    });
+
+                    if (this.measurePoints.length === 2) {
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(this.measurePoints[0].x, this.measurePoints[0].y);
+                        this.ctx.lineTo(this.measurePoints[1].x, this.measurePoints[1].y);
+                        this.ctx.strokeStyle = '#ffd700';
+                        this.ctx.lineWidth = 2;
+                        this.ctx.setLineDash([5, 5]);
+                        this.ctx.stroke();
+                        this.ctx.setLineDash([]);
+                    }
+                }
+
+                if (this.isPlayingPacking && this.packingAnimation < 1) {
+                    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                    this.ctx.fillRect(this.width / 2 - 100, 50, 200, 30);
+                    this.ctx.strokeStyle = '#00d4ff';
+                    this.ctx.lineWidth = 2;
+                    this.ctx.strokeRect(this.width / 2 - 100, 50, 200, 30);
+                    
+                    this.ctx.fillStyle = '#00d4ff';
+                    this.ctx.fillRect(this.width / 2 - 98, 52, 196 * this.packingAnimation, 26);
+                    
+                    this.ctx.fillStyle = '#fff';
+                    this.ctx.font = '14px Microsoft YaHei';
+                    this.ctx.textAlign = 'center';
+                    
+                    const efficiencyText = cell.efficiency ? `空间利用率: ${(cell.efficiency * this.packingAnimation).toFixed(2)}%` : '堆积动画';
+                    this.ctx.fillText(efficiencyText, this.width / 2, 71);
+                }
+            }
+
+            animate() {
+                if (this.isAnimating) {
+                    this.rotationY += 0.005 * this.rotationSpeed;
+                }
+
+                if (this.isPlayingPacking) {
+                    this.packingAnimation += 0.01;
+                    if (this.packingAnimation >= 1) {
+                        this.isPlayingPacking = false;
+                        this.packingAnimation = 0;
+                    }
+                }
+
+                this.draw();
+                requestAnimationFrame(() => this.animate());
+            }
+
+            handleMouseDown(e) {
+                if (this.isMeasuring) return;
+                this.isDragging = true;
+                this.lastMouseX = e.clientX;
+                this.lastMouseY = e.clientY;
+            }
+
+            drag(e) {
+                if (!this.isDragging) return;
+                const deltaX = e.clientX - this.lastMouseX;
+                const deltaY = e.clientY - this.lastMouseY;
+                this.rotationY += deltaX * 0.01;
+                this.rotationX += deltaY * 0.01;
+                
+                this.rotationX = Math.max(-Math.PI/2 + 0.01, Math.min(Math.PI/2 - 0.01, this.rotationX));
+                
+                this.lastMouseX = e.clientX;
+                this.lastMouseY = e.clientY;
+            }
+
+            endDrag() {
+                this.isDragging = false;
+            }
+
+            handleTouchStart(e) {
+                e.preventDefault();
+                if (this.isMeasuring) return;
+                
+                if (e.touches.length === 1) {
+                    this.isDragging = true;
+                    this.lastTouchX = e.touches[0].clientX;
+                    this.lastTouchY = e.touches[0].clientY;
+                } else if (e.touches.length === 2) {
+                    this.isPinching = true;
+                    this.isDragging = false;
+                    this.lastTouchDistance = this.getTouchDistance(e.touches);
+                }
+            }
+
+            handleTouchMove(e) {
+                e.preventDefault();
+                if (this.isMeasuring) return;
+
+                if (this.isDragging && e.touches.length === 1) {
+                    const deltaX = e.touches[0].clientX - this.lastTouchX;
+                    const deltaY = e.touches[0].clientY - this.lastTouchY;
+                    this.rotationY += deltaX * 0.01;
+                    this.rotationX += deltaY * 0.01;
+                    
+                    this.rotationX = Math.max(-Math.PI/2 + 0.01, Math.min(Math.PI/2 - 0.01, this.rotationX));
+                    
+                    this.lastTouchX = e.touches[0].clientX;
+                    this.lastTouchY = e.touches[0].clientY;
+                } else if (this.isPinching && e.touches.length === 2) {
+                    const distance = this.getTouchDistance(e.touches);
+                    const deltaScale = distance / this.lastTouchDistance;
+                    this.zoom *= deltaScale;
+                    this.zoom = Math.max(100, Math.min(350, this.zoom));
+                    this.lastTouchDistance = distance;
+                }
+            }
+
+            handleTouchEnd() {
+                this.isDragging = false;
+                this.isPinching = false;
+            }
+
+            getTouchDistance(touches) {
+                const dx = touches[0].clientX - touches[1].clientX;
+                const dy = touches[0].clientY - touches[1].clientY;
+                return Math.sqrt(dx * dx + dy * dy);
+            }
+
+            zoomCanvas(e) {
+                e.preventDefault();
+                this.zoom -= e.deltaY * 0.2;
+                this.zoom = Math.max(100, Math.min(350, this.zoom));
+            }
+
+            handleClick(e) {
+                if (!this.isMeasuring) return;
+                
+                const rect = this.canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                this.measurePoints.push({ x, y });
+
+                if (this.measurePoints.length === 2) {
+                    const dx = this.measurePoints[0].x - this.measurePoints[1].x;
+                    const dy = this.measurePoints[0].y - this.measurePoints[1].y;
+                    const pixelDistance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    const nmPerPixel = (this.cellTypes[this.currentType].a * 3) / (this.zoom * 0.8);
+                    const realDistance = pixelDistance * nmPerPixel;
+
+                    document.getElementById('measure-result').innerHTML = 
+                        `像素距离: ${pixelDistance.toFixed(1)} px<br>` +
+                        `实际距离: ${(realDistance * 1000).toFixed(2)} pm (${realDistance.toFixed(4)} nm)`;
+
+                    this.addRecord(`测量距离: ${(realDistance * 1000).toFixed(2)} pm`);
+                    
+                    setTimeout(() => {
+                        this.measurePoints = [];
+                        this.isMeasuring = false;
+                        document.getElementById('start-measure').textContent = '开始测量';
+                        document.getElementById('start-measure').classList.remove('active');
+                        document.getElementById('hint').textContent = '拖拽鼠标旋转视角 | 滚轮缩放';
+                    }, 2000);
+                } else {
+                    document.getElementById('measure-result').textContent = '已选择第1点，请点击第2点...';
+                }
+            }
+
+            playPackingAnimation() {
+                this.isPlayingPacking = true;
+                this.packingAnimation = 0;
+                this.addRecord(`播放 ${this.cellTypes[this.currentType].name} 堆积动画`);
+            }
+
+            newChallenge() {
+                const randomIndex = Math.floor(Math.random() * this.challenges.length);
+                this.currentChallenge = this.challenges[randomIndex];
+                document.getElementById('challenge-question').textContent = this.currentChallenge.question;
+                document.getElementById('challenge-answer').value = '';
+                document.getElementById('challenge-result').textContent = '';
+                document.getElementById('challenge-result').className = 'challenge-result';
+                
+                document.querySelectorAll('[data-type]').forEach(b => b.classList.remove('active'));
+                document.querySelector(`[data-type="${this.currentChallenge.type}"]`).classList.add('active');
+                this.setCellType(this.currentChallenge.type);
+                
+                this.addRecord('开始新的密度计算挑战');
+            }
+
+            submitAnswer() {
+                if (!this.currentChallenge) {
+                    document.getElementById('challenge-result').textContent = '请先点击"新题目"';
+                    document.getElementById('challenge-result').className = 'challenge-result wrong';
+                    return;
+                }
+
+                const userAnswer = parseFloat(document.getElementById('challenge-answer').value);
+                if (isNaN(userAnswer)) {
+                    document.getElementById('challenge-result').textContent = '请输入有效的数字';
+                    document.getElementById('challenge-result').className = 'challenge-result wrong';
+                    return;
+                }
+
+                const correctAnswer = this.currentChallenge.answer;
+                const tolerance = 0.5;
+                const relativeTolerance = correctAnswer * 0.05;
+                const finalTolerance = Math.max(tolerance, relativeTolerance);
+
+                if (Math.abs(userAnswer - correctAnswer) <= finalTolerance) {
+                    document.getElementById('challenge-result').innerHTML = 
+                        `✓ 回答正确！<br>正确答案: ${correctAnswer.toFixed(2)} g/cm³`;
+                    document.getElementById('challenge-result').className = 'challenge-result correct';
+                    this.addRecord(`密度计算挑战：正确！答案 ${correctAnswer.toFixed(2)} g/cm³`);
+                } else {
+                    const formula = `ρ = Z × M / (Nₐ × a³) = ${this.currentChallenge.Z} × ${this.currentChallenge.molarMass} / (6.022×10²³ × (${this.currentChallenge.a}×10⁻⁷)³)`;
+                    document.getElementById('challenge-result').innerHTML = 
+                        `✗ 回答错误<br>正确答案: ${correctAnswer.toFixed(2)} g/cm³<br><small>${formula}</small>`;
+                    document.getElementById('challenge-result').className = 'challenge-result wrong';
+                    this.addRecord(`密度计算挑战：错误，正确答案 ${correctAnswer.toFixed(2)} g/cm³`);
+                }
+            }
+
+            async addRecord(text) {
+                try {
+                    const response = await fetch('http://localhost:3000/api/records', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ text })
+                    });
+                    const result = await response.json();
+                    if (result.success) {
+                        this.records.unshift(result.record);
+                        if (this.records.length > 10) {
+                            this.records.pop();
+                        }
+                        this.renderRecords();
+                    }
+                } catch (e) {
+                    const record = {
+                        text,
+                        time: new Date().toLocaleString()
+                    };
+                    this.records.unshift(record);
+                    if (this.records.length > 10) {
+                        this.records.pop();
+                    }
+                    this.renderRecords();
+                    localStorage.setItem('crystalRecords', JSON.stringify(this.records));
+                }
+            }
+
+            renderRecords() {
+                const container = document.getElementById('records-container');
+                container.innerHTML = this.records.map(r => `
+                    <div class="record-item">
+                        <div class="record-type">${r.text}</div>
+                        <div class="record-time">${r.time}</div>
+                    </div>
+                `).join('');
+            }
+
+            async loadRecords() {
+                try {
+                    const response = await fetch('http://localhost:3000/api/records');
+                    const result = await response.json();
+                    if (result.success) {
+                        this.records = result.records.slice(0, 10);
+                        this.renderRecords();
+                    }
+                } catch (e) {
+                    const saved = localStorage.getItem('crystalRecords');
+                    if (saved) {
+                        this.records = JSON.parse(saved);
+                        this.renderRecords();
+                    }
+                }
+            }
+        }
+
+        const simulator = new CrystalSimulator();
+    </script>
+</body>
+</html>

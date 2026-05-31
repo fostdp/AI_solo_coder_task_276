@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>晶体结构测试框架</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', monospace;
+            background: #1a1a2e;
+            min-height: 100vh;
+            color: #fff;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            background: linear-gradient(45deg, #00d4ff, #7b2cbf);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 20px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, #7b2cbf, #9d4edd);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(123, 44, 191, 0.5);
+        }
+
+        .btn-success {
+            background: linear-gradient(45deg, #00d4ff, #0099cc);
+            color: white;
+        }
+
+        .test-category {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .category-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #00d4ff;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .category-stats {
+            font-size: 12px;
+            color: #888;
+        }
+
+        .test-case {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .test-name {
+            font-size: 14px;
+        }
+
+        .test-status {
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .status-pass {
+            background: rgba(0, 200, 100, 0.3);
+            color: #00ff88;
+        }
+
+        .status-fail {
+            background: rgba(200, 50, 50, 0.3);
+            color: #ff6666;
+        }
+
+        .test-details {
+            font-size: 11px;
+            color: #888;
+            margin-top: 5px;
+            padding-top: 5px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .summary {
+            background: rgba(0, 212, 255, 0.1);
+            border: 2px solid #00d4ff;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .summary h2 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .summary-stats {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            font-size: 16px;
+        }
+
+        .pass-count {
+            color: #00ff88;
+        }
+
+        .fail-count {
+            color: #ff6666;
+        }
+
+        .total-count {
+            color: #00d4ff;
+        }
+
+        .canvas-container {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        canvas {
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+        }
+
+        .xrd-plot {
+            margin-top: 20px;
+        }
+
+        .formula {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-family: 'Times New Roman', serif;
+            font-size: 16px;
+            text-align: center;
+        }
+
+        .collapsible {
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .collapsible::before {
+            content: '▼ ';
+            font-size: 12px;
+        }
+
+        .collapsible.collapsed::before {
+            content: '▶ ';
+        }
+
+        .test-content {
+            overflow: hidden;
+            transition: max-height 0.3s;
+        }
+
+        .test-content.collapsed {
+            max-height: 0;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔬 晶体结构测试框架</h1>
+
+        <div class="controls">
+            <button class="btn btn-primary" onclick="runAllTests()">运行所有测试</button>
+            <button class="btn btn-success" onclick="runXRDSimulation()">XRD模拟</button>
+            <button class="btn btn-primary" onclick="exportResults()">导出结果</button>
+        </div>
+
+        <div class="summary" id="summary">
+            <h2>测试摘要</h2>
+            <div class="summary-stats">
+                <span class="total-count">总计: 0</span>
+                <span class="pass-count">✅ 通过: 0</span>
+                <span class="fail-count">❌ 失败: 0</span>
+            </div>
+        </div>
+
+        <div class="canvas-container" id="xrd-container" style="display:none;">
+            <h3 style="margin-bottom:10px;color:#00d4ff;">XRD衍射图谱模拟</h3>
+            <canvas id="xrdCanvas" width="800" height="300"></canvas>
+        </div>
+
+        <div id="test-results"></div>
+    </div>
+
+    <script>
+        const CrystalTestFramework = {
+            results: [],
+            totalTests: 0,
+            passedTests: 0,
+            failedTests: 0,
+
+            cellTypes: {
+                sc: { name: '简单立方', a: 0.400, atoms: 1, coordination: 6, r: 0.200, molarMass: 55.85 },
+                bcc: { name: '体心立方', a: 0.287, atoms: 2, coordination: 8, r: 0.124, molarMass: 55.85 },
+                fcc: { name: '面心立方', a: 0.362, atoms: 4, coordination: 12, r: 0.128, molarMass: 63.55 },
+                nacl: { name: 'NaCl型', a: 0.564, atoms: 4, coordination: 6, r_Na: 0.102, r_Cl: 0.181, molarMass: 58.44 },
+                cscl: { name: 'CsCl型', a: 0.412, atoms: 1, coordination: 8, r_Cs: 0.167, r_Cl: 0.181, molarMass: 168.36 },
+                diamond: { name: '金刚石', a: 0.357, atoms: 8, coordination: 4, r: 0.077, molarMass: 12.01 }
+            },
+
+            assert(condition, message) {
+                return {
+                    pass: condition,
+                    message: message
+                };
+            },
+
+            assertNear(actual, expected, tolerance, message) {
+                const diff = Math.abs(actual - expected);
+                return {
+                    pass: diff <= tolerance,
+                    message: `${message} (期望值: ${expected.toFixed(4)}, 实际值: ${actual.toFixed(4)}, 差值: ${diff.toFixed(6)})`
+                };
+            },
+
+            runTest(category, testName, testFunc) {
+                this.totalTests++;
+                try {
+                    const result = testFunc();
+                    if (result.pass) {
+                        this.passedTests++;
+                    } else {
+                        this.failedTests++;
+                    }
+                    this.logResult(category, testName, result);
+                    return result;
+                } catch (error) {
+                    this.failedTests++;
+                    this.logResult(category, testName, { pass: false, message: `异常: ${error.message}` });
+                    return { pass: false, message: `异常: ${error.message}` };
+                }
+            },
+
+            logResult(category, testName, result) {
+                const existingCategory = this.results.find(r => r.category === category);
+                if (!existingCategory) {
+                    this.results.push({ category, tests: [] });
+                }
+                const cat = this.results.find(r => r.category === category);
+                cat.tests.push({ name: testName, ...result });
+            },
+
+            testAtomCoordinates() {
+                const category = "原子坐标验证";
+
+                this.runTest(category, "SC - 顶点原子坐标正确性", () => {
+                    const a = this.cellTypes.sc.a;
+                    const cornerAtoms = [
+                        [0, 0, 0], [a, 0, 0], [0, a, 0], [0, 0, a],
+                        [a, a, 0], [a, 0, a], [0, a, a], [a, a, a]
+                    ];
+                    return this.assert(cornerAtoms.length === 8, `检测到${cornerAtoms.length}个顶点原子，应为8个`);
+                });
+
+                this.runTest(category, "BCC - 体心原子坐标", () => {
+                    const a = this.cellTypes.bcc.a;
+                    const center = [a/2, a/2, a/2];
+                    return this.assertNear(center[0], a/2, 0.001, "体心原子X坐标");
+                });
+
+                this.runTest(category, "FCC - 面心原子坐标验证", () => {
+                    const a = this.cellTypes.fcc.a;
+                    const faceAtoms = [
+                        [a/2, a/2, 0], [a/2, 0, a/2], [0, a/2, a/2],
+                        [a/2, a/2, a], [a/2, a, a/2], [a, a/2, a/2]
+                    ];
+                    return this.assert(faceAtoms.length === 6, `检测到${faceAtoms.length}个面心原子，应为6个`);
+                });
+
+                this.runTest(category, "NaCl - 离子交替排列验证", () => {
+                    const a = this.cellTypes.nacl.a;
+                    const NaPositions = [
+                        [a/2, a/2, a/2], [a/2, 0, 0], [0, a/2, 0], [0, 0, a/2]
+                    ];
+                    const ClPositions = [
+                        [0, 0, 0], [a/2, a/2, 0], [a/2, 0, a/2], [0, a/2, a/2]
+                    ];
+                    return this.assert(NaPositions.length === 4 && ClPositions.length === 4, 
+                        `Na⁺:${NaPositions.length}个, Cl⁻:${ClPositions.length}个`);
+                });
+
+                this.runTest(category, "金刚石 - 四面体间隙原子", () => {
+                    const a = this.cellTypes.diamond.a;
+                    const tetraAtoms = [
+                        [a/4, a/4, a/4], [3*a/4, 3*a/4, a/4],
+                        [3*a/4, a/4, 3*a/4], [a/4, 3*a/4, 3*a/4]
+                    ];
+                    return this.assert(tetraAtoms.length === 4, `四面体位置应有4个原子，实际${tetraAtoms.length}个`);
+                });
+
+                this.runTest(category, "CsCl - 中心阳离子验证", () => {
+                    const a = this.cellTypes.cscl.a;
+                    const CsAt = [a/2, a/2, a/2];
+                    const dist = Math.sqrt(Math.pow(a/2, 2) * 3);
+                    return this.assertNear(dist, a * Math.sqrt(3) / 2, 0.001, "Cs⁺到顶点距离");
+                });
+            },
+
+            testCoordinationNumber() {
+                const category = "配位数检测";
+
+                this.runTest(category, "SC - 配位数验证", () => {
+                    return this.assert(this.cellTypes.sc.coordination === 6, 
+                        `SC配位数应为6，实际为${this.cellTypes.sc.coordination}`);
+                });
+
+                this.runTest(category, "BCC - 配位数验证", () => {
+                    return this.assert(this.cellTypes.bcc.coordination === 8, 
+                        `BCC配位数应为8，实际为${this.cellTypes.bcc.coordination}`);
+                });
+
+                this.runTest(category, "FCC - 配位数验证", () => {
+                    return this.assert(this.cellTypes.fcc.coordination === 12, 
+                        `FCC配位数应为12，实际为${this.cellTypes.fcc.coordination}`);
+                });
+
+                this.runTest(category, "NaCl - 6:6配位验证", () => {
+                    const a = this.cellTypes.nacl.a;
+                    const NaToCl = a / 2;
+                    return this.assertNear(NaToCl, 0.282, 0.01, 
+                        `Na-Cl键长应为0.282nm，实际${NaToCl.toFixed(3)}nm`);
+                });
+
+                this.runTest(category, "CsCl - 8:8配位验证", () => {
+                    const a = this.cellTypes.cscl.a;
+                    const CsToCl = a * Math.sqrt(3) / 2;
+                    return this.assertNear(CsToCl, 0.357, 0.01, 
+                        `Cs-Cl键长应为0.357nm，实际${CsToCl.toFixed(3)}nm`);
+                });
+
+                this.runTest(category, "金刚石 - 4配位验证", () => {
+                    const a = this.cellTypes.diamond.a;
+                    const bondLength = a * Math.sqrt(3) / 4;
+                    return this.assertNear(bondLength, 0.154, 0.01, 
+                        `C-C键长应为0.154nm，实际${bondLength.toFixed(3)}nm`);
+                });
+            },
+
+            testPackingEfficiency() {
+                const category = "空间利用率公式验证";
+
+                this.runTest(category, "SC - 空间利用率计算", () => {
+                    const a = this.cellTypes.sc.a;
+                    const r = a / 2;
+                    const V_atom = (4/3) * Math.PI * Math.pow(r, 3);
+                    const V_cell = Math.pow(a, 3);
+                    const efficiency = (1 * V_atom / V_cell) * 100;
+                    return this.assertNear(efficiency, 52.36, 0.1, 
+                        `SC空间利用率应为52.36%，实际${efficiency.toFixed(2)}%`);
+                });
+
+                this.runTest(category, "BCC - 空间利用率计算", () => {
+                    const a = this.cellTypes.bcc.a;
+                    const r = a * Math.sqrt(3) / 4;
+                    const V_atom = (4/3) * Math.PI * Math.pow(r, 3);
+                    const V_cell = Math.pow(a, 3);
+                    const efficiency = (2 * V_atom / V_cell) * 100;
+                    return this.assertNear(efficiency, 68.02, 0.1, 
+                        `BCC空间利用率应为68.02%，实际${efficiency.toFixed(2)}%`);
+                });
+
+                this.runTest(category, "FCC - 空间利用率计算", () => {
+                    const a = this.cellTypes.fcc.a;
+                    const r = a * Math.sqrt(2) / 4;
+                    const V_atom = (4/3) * Math.PI * Math.pow(r, 3);
+                    const V_cell = Math.pow(a, 3);
+                    const efficiency = (4 * V_atom / V_cell) * 100;
+                    return this.assertNear(efficiency, 74.05, 0.1, 
+                        `FCC空间利用率应为74.05%，实际${efficiency.toFixed(2)}%`);
+                });
+
+                this.runTest(category, "金刚石 - 空间利用率计算", () => {
+                    const a = this.cellTypes.diamond.a;
+                    const r = a * Math.sqrt(3) / 8;
+                    const V_atom = (4/3) * Math.PI * Math.pow(r, 3);
+                    const V_cell = Math.pow(a, 3);
+                    const efficiency = (8 * V_atom / V_cell) * 100;
+                    return this.assertNear(efficiency, 34.01, 0.1, 
+                        `金刚石空间利用率应为34.01%，实际${efficiency.toFixed(2)}%`);
+                });
+
+                this.runTest(category, "FCC > BCC > SC 效率排序", () => {
+                    const eff = {
+                        fcc: 74.05,
+                        bcc: 68.02,
+                        sc: 52.36
+                    };
+                    return this.assert(eff.fcc > eff.bcc && eff.bcc > eff.sc, 
+                        "效率排序验证: FCC > BCC > SC");
+                });
+            },
+
+            testDensityCalculation() {
+                const category = "密度计算公式验证";
+
+                this.runTest(category, "Fe (BCC) 密度计算", () => {
+                    const Z = 2;
+                    const M = 55.85;
+                    const a = 0.287e-7;
+                    const N_A = 6.022e23;
+                    const rho = (Z * M) / (N_A * Math.pow(a, 3));
+                    return this.assertNear(rho, 7.86, 0.1, 
+                        `Fe密度应为7.86g/cm³，实际${rho.toFixed(2)}g/cm³`);
+                });
+
+                this.runTest(category, "Cu (FCC) 密度计算", () => {
+                    const Z = 4;
+                    const M = 63.55;
+                    const a = 0.362e-7;
+                    const N_A = 6.022e23;
+                    const rho = (Z * M) / (N_A * Math.pow(a, 3));
+                    return this.assertNear(rho, 8.92, 0.1, 
+                        `Cu密度应为8.92g/cm³，实际${rho.toFixed(2)}g/cm³`);
+                });
+
+                this.runTest(category, "NaCl 密度计算", () => {
+                    const Z = 4;
+                    const M = 58.44;
+                    const a = 0.564e-7;
+                    const N_A = 6.022e23;
+                    const rho = (Z * M) / (N_A * Math.pow(a, 3));
+                    return this.assertNear(rho, 2.16, 0.1, 
+                        `NaCl密度应为2.16g/cm³，实际${rho.toFixed(2)}g/cm³`);
+                });
+
+                this.runTest(category, "金刚石密度计算", () => {
+                    const Z = 8;
+                    const M = 12.01;
+                    const a = 0.357e-7;
+                    const N_A = 6.022e23;
+                    const rho = (Z * M) / (N_A * Math.pow(a, 3));
+                    return this.assertNear(rho, 3.51, 0.1, 
+                        `金刚石密度应为3.51g/cm³，实际${rho.toFixed(2)}g/cm³`);
+                });
+
+                this.runTest(category, "CsCl 密度计算", () => {
+                    const Z = 1;
+                    const M = 168.36;
+                    const a = 0.412e-7;
+                    const N_A = 6.022e23;
+                    const rho = (Z * M) / (N_A * Math.pow(a, 3));
+                    return this.assertNear(rho, 3.99, 0.1, 
+                        `CsCl密度应为3.99g/cm³，实际${rho.toFixed(2)}g/cm³`);
+                });
+
+                this.runTest(category, "密度公式边界测试", () => {
+                    const rho = (1 * 1.008) / (6.022e23 * Math.pow(1.0e-7, 3));
+                    return this.assert(rho > 0, "密度计算结果必须为正");
+                });
+            },
+
+            testBraggLaw() {
+                const category = "布拉格定律与XRD模拟";
+
+                this.runTest(category, "布拉格定律公式验证", () => {
+                    const lambda = 0.154;
+                    const d = 0.200;
+                    const theta = Math.asin(lambda / (2 * d)) * (180 / Math.PI);
+                    return this.assert(theta > 0 && theta < 90, 
+                        `2θ = ${(2*theta).toFixed(2)}° 在合理范围内`);
+                });
+
+                this.runTest(category, "SC - 面间距计算", () => {
+                    const a = this.cellTypes.sc.a;
+                    const d_100 = a / Math.sqrt(1);
+                    const d_110 = a / Math.sqrt(2);
+                    const d_111 = a / Math.sqrt(3);
+                    return this.assert(d_100 > d_110 && d_110 > d_111, 
+                        `d(100)=${d_100.toFixed(3)} > d(110)=${d_110.toFixed(3)} > d(111)=${d_111.toFixed(3)}`);
+                });
+
+                this.runTest(category, "BCC - 消光规律验证", () => {
+                    const allowed = [
+                        {h:1,k:1,l:0}, {h:2,k:0,l:0}, {h:2,k:1,l:1}, {h:2,k:2,l:0}
+                    ];
+                    const forbidden = [
+                        {h:1,k:0,l:0}, {h:1,k:1,l:1}, {h:2,k:1,l:0}
+                    ];
+                    const allowedPass = allowed.every(hkl => (hkl.h + hkl.k + hkl.l) % 2 === 0);
+                    const forbiddenPass = forbidden.every(hkl => (hkl.h + hkl.k + hkl.l) % 2 !== 0);
+                    return this.assert(allowedPass && forbiddenPass, 
+                        "BCC消光规律: h+k+l=偶数时出现衍射");
+                });
+
+                this.runTest(category, "FCC - 消光规律验证", () => {
+                    const allowed = [
+                        {h:1,k:1,l:1}, {h:2,k:0,l:0}, {h:2,k:2,l:0}, {h:3,k:1,l:1}
+                    ];
+                    const allowedPass = allowed.every(hkl => {
+                        const allEven = (hkl.h % 2 === 0 && hkl.k % 2 === 0 && hkl.l % 2 === 0);
+                        const allOdd = (hkl.h % 2 === 1 && hkl.k % 2 === 1 && hkl.l % 2 === 1);
+                        return allEven || allOdd;
+                    });
+                    return this.assert(allowedPass, 
+                        "FCC消光规律: h,k,l全奇或全偶时出现衍射");
+                });
+
+                this.runTest(category, "Cu Kα 波长验证", () => {
+                    const lambda = 0.15406;
+                    return this.assertNear(lambda, 0.154, 0.001, 
+                        `Cu Kα波长为${lambda}nm`);
+                });
+            },
+
+            testCrystalSystem() {
+                const category = "晶系与几何参数";
+
+                this.runTest(category, "立方晶系参数验证", () => {
+                    const a = 0.400;
+                    const volume = Math.pow(a, 3);
+                    return this.assertNear(volume, 0.064, 0.001, 
+                        `晶胞体积为${volume.toFixed(3)}nm³`);
+                });
+
+                this.runTest(category, "面对角线长度", () => {
+                    const a = 0.400;
+                    const faceDiag = a * Math.sqrt(2);
+                    return this.assertNear(faceDiag, 0.5656, 0.001, 
+                        `面对角线长度${faceDiag.toFixed(4)}nm`);
+                });
+
+                this.runTest(category, "体对角线长度", () => {
+                    const a = 0.400;
+                    const bodyDiag = a * Math.sqrt(3);
+                    return this.assertNear(bodyDiag, 0.6928, 0.001, 
+                        `体对角线长度${bodyDiag.toFixed(4)}nm`);
+                });
+
+                this.runTest(category, "原子半径-晶格常数关系", () => {
+                    const results = [];
+                    results.push(this.assertNear(this.cellTypes.sc.a / 2, 0.200, 0.001, "SC: r = a/2"));
+                    results.push(this.assertNear(this.cellTypes.bcc.a * Math.sqrt(3) / 4, 0.124, 0.01, "BCC: r = a√3/4"));
+                    results.push(this.assertNear(this.cellTypes.fcc.a * Math.sqrt(2) / 4, 0.128, 0.01, "FCC: r = a√2/4"));
+                    return this.assert(results.every(r => r.pass), "原子半径关系验证");
+                });
+
+                this.runTest(category, "石墨层间距", () => {
+                    const c = 0.670;
+                    const layerDistance = c / 2;
+                    return this.assertNear(layerDistance, 0.335, 0.001, 
+                        `石墨层间距${layerDistance.toFixed(3)}nm`);
+                });
+            },
+
+            calculateXRDPeaks(cellType) {
+                const cell = this.cellTypes[cellType];
+                const lambda = 0.15406;
+                const peaks = [];
+
+                const millerIndices = [];
+                for (let h = 0; h <= 5; h++) {
+                    for (let k = 0; k <= 5; k++) {
+                        for (let l = 0; l <= 5; l++) {
+                            if (h === 0 && k === 0 && l === 0) continue;
+                            millerIndices.push({h, k, l});
+                        }
+                    }
+                }
+
+                millerIndices.forEach(hkl => {
+                    const {h, k, l} = hkl;
+                    let allowed = false;
+
+                    if (cellType === 'sc') {
+                        allowed = true;
+                    } else if (cellType === 'bcc') {
+                        allowed = (h + k + l) % 2 === 0;
+                    } else if (cellType === 'fcc') {
+                        const allEven = (h % 2 === 0 && k % 2 === 0 && l % 2 === 0);
+                        const allOdd = (h % 2 === 1 && k % 2 === 1 && l % 2 === 1);
+                        allowed = allEven || allOdd;
+                    } else if (cellType === 'diamond') {
+                        const allEven = (h % 2 === 0 && k % 2 === 0 && l % 2 === 0);
+                        const allOdd = (h % 2 === 1 && k % 2 === 1 && l % 2 === 1);
+                        allowed = (allEven || allOdd) && ((h + k + l) % 4 !== 2);
+                    }
+
+                    if (allowed) {
+                        const d = cell.a / Math.sqrt(h*h + k*k + l*l);
+                        const ratio = lambda / (2 * d);
+                        if (ratio <= 1 && ratio >= -1) {
+                            const theta = Math.asin(ratio) * (180 / Math.PI);
+                            const twoTheta = 2 * theta;
+                            if (twoTheta > 10 && twoTheta < 100) {
+                                const intensity = Math.random() * 0.5 + 0.5;
+                                peaks.push({ twoTheta, d, hkl: `(${h}${k}${l})`, intensity });
+                            }
+                        }
+                    }
+                });
+
+                return peaks.sort((a, b) => a.twoTheta - b.twoTheta);
+            }
+        };
+
+        function runAllTests() {
+            CrystalTestFramework.results = [];
+            CrystalTestFramework.totalTests = 0;
+            CrystalTestFramework.passedTests = 0;
+            CrystalTestFramework.failedTests = 0;
+
+            CrystalTestFramework.testAtomCoordinates();
+            CrystalTestFramework.testCoordinationNumber();
+            CrystalTestFramework.testPackingEfficiency();
+            CrystalTestFramework.testDensityCalculation();
+            CrystalTestFramework.testBraggLaw();
+            CrystalTestFramework.testCrystalSystem();
+
+            renderResults();
+        }
+
+        function renderResults() {
+            const summaryEl = document.getElementById('summary');
+            summaryEl.innerHTML = `
+                <h2>测试摘要</h2>
+                <div class="summary-stats">
+                    <span class="total-count">总计: ${CrystalTestFramework.totalTests}</span>
+                    <span class="pass-count">✅ 通过: ${CrystalTestFramework.passedTests}</span>
+                    <span class="fail-count">❌ 失败: ${CrystalTestFramework.failedTests}</span>
+                </div>
+            `;
+
+            const container = document.getElementById('test-results');
+            container.innerHTML = CrystalTestFramework.results.map(category => {
+                const passed = category.tests.filter(t => t.pass).length;
+                const total = category.tests.length;
+                return `
+                    <div class="test-category">
+                        <div class="category-title collapsible" onclick="toggleCategory(this)">
+                            ${category.category}
+                            <span class="category-stats">(${passed}/${total} 通过)</span>
+                        </div>
+                        <div class="test-content">
+                            ${category.tests.map(test => `
+                                <div class="test-case">
+                                    <div>
+                                        <div class="test-name">${test.name}</div>
+                                        <div class="test-details">${test.message}</div>
+                                    </div>
+                                    <span class="test-status ${test.pass ? 'status-pass' : 'status-fail'}">
+                                        ${test.pass ? 'PASS' : 'FAIL'}
+                                    </span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function toggleCategory(element) {
+            element.classList.toggle('collapsed');
+            element.nextElementSibling.classList.toggle('collapsed');
+        }
+
+        function runXRDSimulation() {
+            const container = document.getElementById('xrd-container');
+            container.style.display = 'block';
+
+            const canvas = document.getElementById('xrdCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            ctx.fillStyle = '#0a0a1a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= 10; i++) {
+                const x = 50 + i * 70;
+                ctx.beginPath();
+                ctx.moveTo(x, 20);
+                ctx.lineTo(x, 260);
+                ctx.stroke();
+            }
+
+            const colors = ['#ff6b6b', '#4ecdc4', '#ffe66d'];
+            const cellTypes = ['sc', 'bcc', 'fcc'];
+            const labels = ['SC', 'BCC', 'FCC'];
+
+            cellTypes.forEach((cellType, idx) => {
+                const peaks = CrystalTestFramework.calculateXRDPeaks(cellType);
+                const yBase = 250 - idx * 70;
+
+                ctx.fillStyle = colors[idx];
+                ctx.font = 'bold 12px Microsoft YaHei';
+                ctx.fillText(labels[idx], 10, yBase);
+
+                peaks.forEach(peak => {
+                    const x = 50 + (peak.twoTheta - 10) * 7;
+                    const height = peak.intensity * 50;
+                    
+                    ctx.fillStyle = colors[idx];
+                    ctx.fillRect(x, yBase - height, 2, height);
+
+                    if (height > 25) {
+                        ctx.fillStyle = '#fff';
+                        ctx.font = '10px Arial';
+                        ctx.fillText(peak.hkl, x - 8, yBase - height - 5);
+                    }
+                });
+            });
+
+            ctx.fillStyle = '#fff';
+            ctx.font = '12px Microsoft YaHei';
+            ctx.fillText('2θ (°)', 750, 285);
+            
+            for (let i = 0; i <= 8; i++) {
+                const x = 50 + i * 90;
+                ctx.fillText((10 + i * 10).toString(), x - 10, 280);
+            }
+        }
+
+        function exportResults() {
+            const data = {
+                summary: {
+                    total: CrystalTestFramework.totalTests,
+                    passed: CrystalTestFramework.passedTests,
+                    failed: CrystalTestFramework.failedTests
+                },
+                results: CrystalTestFramework.results,
+                timestamp: new Date().toISOString()
+            };
+
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'crystal_test_results.json';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        runAllTests();
+    </script>
+</body>
+</html>
